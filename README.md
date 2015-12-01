@@ -81,6 +81,9 @@ if( (node && !tpl) || (!node && tpl)) {
   cData.failed = true;
   return true;              
 }
+
+var v_list = this.v_list;
+
 if( (node instanceof Array) && (tpl instanceof Array) ) {
 
     for(var i=0; i<node.length; i++) {
@@ -472,13 +475,19 @@ var v_list = varString.split(",").map(function(v) {
     return v.trim();
 });
 
+this.v_list = v_list;
+
 // The match might be also multilne...
-var matchAST = esprima.parse(matchExpression).body.shift();
-var intoAST  = esprima.parse(newExpression).body.shift();        
+var matchAST = esprima.parse(matchExpression); // .body.shift();
+var intoAST  = esprima.parse(newExpression); // .body.shift();        
+
+if(matchAST.type=="Program") matchAST = matchAST.body.shift();
+if(intoAST.type=="Program") intoAST = intoAST.body.shift();
 
 if(matchAST.type=="ExpressionStatement") {
   matchAST = matchAST.expression;
 }
+
 
 // this._variables
 var walker = ASTWalker();
@@ -498,10 +507,9 @@ walker.on("node", function(c) {
      
      if(all_found) {
             var matchWalk = ASTWalker();
-            var matchAST = esprima.parse(matchExpression).body.shift();
-            var intoAST  = esprima.parse(newExpression).body.shift();        
-    
-            if(matchAST.type=="ExpressionStatement") matchAST = matchAST.expression;
+            // var matchAST = esprima.parse(matchExpression).body.shift();
+            var intoAST  = esprima.parse(newExpression);        
+            if(intoAST.type=="Program") intoAST = intoAST.body.shift();
             if(intoAST.type=="ExpressionStatement")  intoAST = intoAST.expression;
 
             matchWalk.on("Identifier", function(n) {
@@ -532,6 +540,9 @@ walker.on("node", function(c) {
                 })
             });
             matchWalk.startWalk( intoAST, { functions : {}, vars : {}} ); 
+           Object.keys(intoAST).forEach( function(k) {
+             node[k] = intoAST[k];
+           })              
      }
     }
 });
