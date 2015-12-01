@@ -73,296 +73,333 @@ The class has following internal singleton variables:
 
 ```javascript
 
-if(cData.failed) return true;
-
-if(!node && !tpl) return;
-
-if( (node && !tpl) || (!node && tpl)) {
-  cData.failed = true;
-  return true;              
-}
-
-var v_list = this.v_list;
-
-if( (node instanceof Array) && (tpl instanceof Array) ) {
-
-    for(var i=0; i<node.length; i++) {
-        var n = node[i],
-            t = tpl[i];
-        var test = t;
-        if(test.type=="ExpressionStatement") test = test.expression;
-        if(test && test.type=="Identifier" && test.name=="codeBlock") {
-          // the rest are skipped
-          cData.slots[test.name] = [node,n]; 
-          break;
-        }
-        this.diff_nodes(n,t,cData);
+try {
+    
+    if(cData.failed) return true;
+    
+    if(!node && !tpl) return;
+    
+    if( (node && !tpl) || (!node && tpl)) {
+      cData.failed = true;
+      return true;              
     }
-    return;
-}
-if(tpl.type == "Identifier" && tpl.name) {
-    // console.log("Identifier", tpl.name)
-    if(tpl.name && (v_list.indexOf(tpl.name)>=0)) {
-      if(tpl.name=="codeBlock") {
+    
+    var v_list = this.v_list;
+    
+    if( (node instanceof Array) && (tpl instanceof Array) ) {
         
-      } else {
-        cData.slots[tpl.name] = node;                  
-      }
-      return;
-    }              
-}
+        // look for codeBlock template variable...
+        var tt, t_rest_index=-1;
 
-if(node.type != tpl.type) {
-  cData.failed = true;
-  return true;
-}
-if(node.type=="Literal") {
-    if(node.value != tpl.value) {
-       cData.failed = true;
-       return true;
+        for(var i=0; i<tpl.length; i++) {
+            var n = tpl[i];
+            if(n.type=="ExpressionStatement") n = n.expression;
+            if(n && n.type=="Literal" && n.value=="...rest") {
+              t_rest_index = i;
+              tt = n;
+              break;
+            }
+        }
+        
+        var until_i = node.length;
+
+        // if "...rest" can not be reached, not enough "material" 
+        if(t_rest_index>=0 && ( t_rest_index >= until_i)) {
+           cData.failed = true;
+           return true;            
+        }
+
+        for(var i=0; i<until_i; i++) {
+            var n = node[i],
+                t = tpl[i];
+            var test = t;
+            
+            if(!test) {
+               cData.failed = true;
+               return true;            
+            }
+
+            if(test.type=="ExpressionStatement") test = test.expression;
+            if(test && test.type=="Literal" && test.name=="...rest") {
+              // the rest are skipped
+                cData.slots["...rest"] = {
+                      srcArray : node,
+                      tplArray : tpl,
+                      tplNodeIndex : t_rest_index,
+                      tplNode : tt
+                };  
+              break;
+            }
+            this.diff_nodes(n,t,cData);
+        }
+        return;
     }
-}
-
-if(node.type=="Identifier") {
-    if(node.name != tpl.name) {
-       cData.failed = true;
-       return true;
+    if(tpl.type == "Identifier" && tpl.name) {
+        // console.log("Identifier", tpl.name)
+        if(tpl.name && (v_list.indexOf(tpl.name)>=0)) {
+          if(tpl.name=="codeBlock") {
+            
+          } else {
+            cData.slots[tpl.name] = node;                  
+          }
+          return;
+        }              
     }
-}          
-if(node.type=="MemberExpression") {
-    if(node.computed != tpl.computed) {
-       cData.failed = true;
-       return true;
-    }              
-    this.diff_nodes(node.property, tpl.property, cData);
-    this.diff_nodes(node.object, tpl.object, cData);              
-}
-if(node.type=="FunctionDeclaration") {
-    if(node.generator != tpl.generator) {
-       cData.failed = true;
-       return true;        
-    }    
-    this.diff_nodes(node.params, tpl.params, cData);
-    this.diff_nodes(node.body, tpl.body, cData);
-    this.diff_nodes(node.id, tpl.id, cData);
-}             
-if(node.type=="ArrowFunctionExpression") {
-    if(node.generator != tpl.generator) {
-       cData.failed = true;
-       return true;        
-    }
-    this.diff_nodes(node.params, tpl.params, cData);
-    this.diff_nodes(node.body, tpl.body, cData);
-    this.diff_nodes(node.id, tpl.id, cData);    
-}
-if(node.type=="FunctionExpression") {
-    if(node.generator != tpl.generator) {
-       cData.failed = true;
-       return true;        
-    }
-    this.diff_nodes(node.params, tpl.params, cData);
-    this.diff_nodes(node.body, tpl.body, cData);
-    this.diff_nodes(node.id, tpl.id, cData);
-} 
-
-if(node.type=="TryStatement") {
-    this.diff_nodes(node.block, tpl.block, cData);
-    this.diff_nodes(node.handler, tpl.handler, cData);
-    this.diff_nodes(node.finalizer, tpl.finalizer, cData);    
-}
-if(node.type=="CallExpression") {
-    this.diff_nodes(node.callee, tpl.callee, cData);
-    this.diff_nodes(node.arguments, tpl.arguments, cData);
-}
-if(node.type=="SequenceExpression") {
-    this.diff_nodes(node.expressions, tpl.expressions, cData);
-}
-if(node.type=="BlockStatement") {
-    this.diff_nodes(node.body, tpl.body, cData);
-}
-if(node.type=="VariableDeclaration") {
-    this.diff_nodes(node.declarations, tpl.declarations, cData);
-} 
-if(node.type=="YieldExpression") {
-    this.diff_nodes(node.argument, tpl.argument, cData);
-}
-if(node.type=="ReturnStatement") {
-    this.diff_nodes(node.argument, tpl.argument, cData);
-}
-
-if(node.type=="BreakStatement") {
-    this.diff_nodes(node.label, tpl.label, cData);
-}
-
-if(node.type=="MethodDefinition") {
-    this.diff_nodes(node.key, tpl.key, cData);
-    this.diff_nodes(node.value, tpl.value, cData);
-}
-if(node.type=="ClassDeclaration") {
-    this.diff_nodes(node.id, tpl.id, cData);
-    this.diff_nodes(node.superClass, tpl.superClass, cData);   
-    this.diff_nodes(node.body, tpl.body, cData);   
-}
-if(node.type=="ClassBody") {
-    this.diff_nodes(node.body, tpl.body, cData);   
-}
-if(node.type=="CatchClause") {
-    this.diff_nodes(node.param, tpl.param, cData); 
-    this.diff_nodes(node.body, tpl.body, cData);   
-}
-if(node.type=="NewExpression") {
-    this.diff_nodes(node.callee, tpl.callee, cData);
-    this.diff_nodes(node.arguments, tpl.arguments, cData);
-}
-if(node.type=="ConditionalExpression") {
-    this.diff_nodes(node.test, tpl.test, cData);  
-    this.diff_nodes(node.consequent, tpl.consequent, cData);  
-    this.diff_nodes(node.alternate, tpl.alternate, cData);      
-}
-if(node.type=="DebuggerStatement") {
-
-}
-if(node.type=="ThrowStatement") {
-    this.diff_nodes(node.argument, tpl.argument, cData);
-}
-if(node.type=="BlockStatement") {
-    this.diff_nodes(node.body, tpl.body, cData);
-}           
-
-// LabeledStatement
-if(node.type=="LabeledStatement") {
-    this.diff_nodes(node.label, tpl.label, cData);
-    this.diff_nodes(node.body, tpl.body, cData);
-}           
-
-// LogicalExpression
-if(node.type=="LogicalExpression") {
-    if(node.operator != tpl.operator) {
-       cData.failed = true;
-       return true;
-    }               
-    this.diff_nodes(node.left, tpl.left, cData);
-    this.diff_nodes(node.right, tpl.right, cData);                
-}          
-// UnaryExpression
-if(node.type=="UnaryExpression") {
-    if(node.operator != tpl.operator) {
+    
+    if(node.type != tpl.type) {
       cData.failed = true;
       return true;
-    }                
-    this.diff_nodes(node.argument, tpl.argument, cData);
-} 
-if(node.type=="Program") {
-    this.diff_nodes(node.body, tpl.body, cData);
-} 
-if(node.type=="UpdateExpression") {
-    if(node.operator != tpl.operator) {
-      cData.failed = true;
-      return true;
-    }                
-    this.diff_nodes(node.argument, tpl.argument, cData);
-}           
-if(node.type=="Property") {
-  if(node.shorthand != tpl.shorthand) {
-    cData.failed = true;
-    return true;
-  }                
-  this.diff_nodes(node.key, tpl.key, cData); 
-  this.diff_nodes(node.value, tpl.value, cData); 
-}
-if(node.type=="ArrayPattern") {
-  this.diff_nodes(node.elements, tpl.elements, cData); 
-}   
-if(node.type=="ArrayExpression") {
-  this.diff_nodes(node.elements, tpl.elements, cData); 
-}          
-/*
-ArrayExpression
-xArrayPattern
-*/
-if(node.type=="ObjectPattern") {
-  this.diff_nodes(node.properties, tpl.properties, cData); 
-}
-
-if(node.type=="ObjectExpression") {
-  this.diff_nodes(node.properties, tpl.properties, cData); 
-}
-
-if(node.type=="RestElement") {
-  this.diff_nodes(node.argument, tpl.argument, cData); 
-}
-
-if(node.type=="IfStatement") {
-    this.diff_nodes(node.test, tpl.test, cData);  
-    this.diff_nodes(node.consequent, tpl.consequent, cData);  
-    this.diff_nodes(node.alternate, tpl.alternate, cData);  
-}          
-
-if(node.type=="Super") {
-    this.diff_nodes(node.test, tpl.test, cData);  
-
-}
-if(node.type=="SwitchStatement") {
-    this.diff_nodes(node.discriminant, tpl.discriminant, cData);  
-    this.diff_nodes(node.cases, tpl.cases, cData);  
-
-}
-if(node.type=="SwitchCase") {
-    this.diff_nodes(node.test, tpl.test, cData);
-    this.diff_nodes(node.consequent, tpl.consequent, cData);
-
-}
-if(node.type=="ForOfStatement") {
-    this.diff_nodes(node.left, tpl.left, cData);
-    this.diff_nodes(node.right, tpl.right, cData);  
-    this.diff_nodes(node.body, tpl.body, cData);  
-}
-if(node.type=="ForInStatement") {
-    this.diff_nodes(node.left, tpl.left, cData);
-    this.diff_nodes(node.right, tpl.right, cData);  
-    this.diff_nodes(node.body, tpl.body, cData);  
-}
-if(node.type=="ForStatement") {
-    this.diff_nodes(node.init, tpl.init, cData);
-    this.diff_nodes(node.test, tpl.test, cData);  
-    this.diff_nodes(node.update, tpl.update, cData);  
-    this.diff_nodes(node.body, tpl.body, cData);  
-}
-if(node.type=="WhileStatement") {
-    this.diff_nodes(node.test, tpl.test, cData);  
-    this.diff_nodes(node.body, tpl.body, cData);      
-}
-if(node.type=="DoWhileStatement") {
-    this.diff_nodes(node.test, tpl.test, cData);  
-    this.diff_nodes(node.body, tpl.body, cData);      
-}
-if(node.type=="BinaryExpression") {
-    if(node.operator != tpl.operator) {
-       cData.failed = true;
-       return true;
-    }               
-    this.diff_nodes(node.left, tpl.left, cData);
-    this.diff_nodes(node.right, tpl.right, cData);                
-}
-// declarations
-if(node.type=="VariableDeclarator") {
-    if(node.kind != tpl.kind) {
-       cData.failed = true;
-       return true;
-    }              
-    this.diff_nodes(node.id, tpl.id, cData);
-    this.diff_nodes(node.init, tpl.init, cData);
-}           
-if(node.type=="ExpressionStatement") {
-  this.diff_nodes(node.expression, tpl.expression, cData);
-}
-if(node.type=="AssignmentExpression") {
-    if(node.operator != tpl.operator) {
-       cData.failed = true;
-       return true;
-    }               
-    this.diff_nodes(node.left, tpl.left, cData);
-    this.diff_nodes(node.right, tpl.right, cData);              
+    }
+    if(node.type=="Literal") {
+        if(node.value != tpl.value) {
+           cData.failed = true;
+           return true;
+        }
+    }
+    
+    if(node.type=="Identifier") {
+        if(node.name != tpl.name) {
+           cData.failed = true;
+           return true;
+        }
+    }          
+    if(node.type=="MemberExpression") {
+        if(node.computed != tpl.computed) {
+           cData.failed = true;
+           return true;
+        }              
+        this.diff_nodes(node.property, tpl.property, cData);
+        this.diff_nodes(node.object, tpl.object, cData);              
+    }
+    if(node.type=="FunctionDeclaration") {
+        if(node.generator != tpl.generator) {
+           cData.failed = true;
+           return true;        
+        }    
+        this.diff_nodes(node.params, tpl.params, cData);
+        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.id, tpl.id, cData);
+    }             
+    if(node.type=="ArrowFunctionExpression") {
+        if(node.generator != tpl.generator) {
+           cData.failed = true;
+           return true;        
+        }
+        this.diff_nodes(node.params, tpl.params, cData);
+        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.id, tpl.id, cData);    
+    }
+    if(node.type=="FunctionExpression") {
+        if(node.generator != tpl.generator) {
+           cData.failed = true;
+           return true;        
+        }
+        this.diff_nodes(node.params, tpl.params, cData);
+        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.id, tpl.id, cData);
+    } 
+    
+    if(node.type=="TryStatement") {
+        this.diff_nodes(node.block, tpl.block, cData);
+        this.diff_nodes(node.handler, tpl.handler, cData);
+        this.diff_nodes(node.finalizer, tpl.finalizer, cData);    
+    }
+    if(node.type=="CallExpression") {
+        this.diff_nodes(node.callee, tpl.callee, cData);
+        this.diff_nodes(node.arguments, tpl.arguments, cData);
+    }
+    if(node.type=="SequenceExpression") {
+        this.diff_nodes(node.expressions, tpl.expressions, cData);
+    }
+    if(node.type=="BlockStatement") {
+        this.diff_nodes(node.body, tpl.body, cData);
+    }
+    if(node.type=="VariableDeclaration") {
+        this.diff_nodes(node.declarations, tpl.declarations, cData);
+    } 
+    if(node.type=="YieldExpression") {
+        this.diff_nodes(node.argument, tpl.argument, cData);
+    }
+    if(node.type=="ReturnStatement") {
+        this.diff_nodes(node.argument, tpl.argument, cData);
+    }
+    
+    if(node.type=="BreakStatement") {
+        this.diff_nodes(node.label, tpl.label, cData);
+    }
+    
+    if(node.type=="MethodDefinition") {
+        this.diff_nodes(node.key, tpl.key, cData);
+        this.diff_nodes(node.value, tpl.value, cData);
+    }
+    if(node.type=="ClassDeclaration") {
+        this.diff_nodes(node.id, tpl.id, cData);
+        this.diff_nodes(node.superClass, tpl.superClass, cData);   
+        this.diff_nodes(node.body, tpl.body, cData);   
+    }
+    if(node.type=="ClassBody") {
+        this.diff_nodes(node.body, tpl.body, cData);   
+    }
+    if(node.type=="CatchClause") {
+        this.diff_nodes(node.param, tpl.param, cData); 
+        this.diff_nodes(node.body, tpl.body, cData);   
+    }
+    if(node.type=="NewExpression") {
+        this.diff_nodes(node.callee, tpl.callee, cData);
+        this.diff_nodes(node.arguments, tpl.arguments, cData);
+    }
+    if(node.type=="ConditionalExpression") {
+        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.consequent, tpl.consequent, cData);  
+        this.diff_nodes(node.alternate, tpl.alternate, cData);      
+    }
+    if(node.type=="DebuggerStatement") {
+    
+    }
+    if(node.type=="ThrowStatement") {
+        this.diff_nodes(node.argument, tpl.argument, cData);
+    }
+    if(node.type=="BlockStatement") {
+        this.diff_nodes(node.body, tpl.body, cData);
+    }           
+    
+    // LabeledStatement
+    if(node.type=="LabeledStatement") {
+        this.diff_nodes(node.label, tpl.label, cData);
+        this.diff_nodes(node.body, tpl.body, cData);
+    }           
+    
+    // LogicalExpression
+    if(node.type=="LogicalExpression") {
+        if(node.operator != tpl.operator) {
+           cData.failed = true;
+           return true;
+        }               
+        this.diff_nodes(node.left, tpl.left, cData);
+        this.diff_nodes(node.right, tpl.right, cData);                
+    }          
+    // UnaryExpression
+    if(node.type=="UnaryExpression") {
+        if(node.operator != tpl.operator) {
+          cData.failed = true;
+          return true;
+        }                
+        this.diff_nodes(node.argument, tpl.argument, cData);
+    } 
+    if(node.type=="Program") {
+        this.diff_nodes(node.body, tpl.body, cData);
+    } 
+    if(node.type=="UpdateExpression") {
+        if(node.operator != tpl.operator) {
+          cData.failed = true;
+          return true;
+        }                
+        this.diff_nodes(node.argument, tpl.argument, cData);
+    }           
+    if(node.type=="Property") {
+      if(node.shorthand != tpl.shorthand) {
+        cData.failed = true;
+        return true;
+      }                
+      this.diff_nodes(node.key, tpl.key, cData); 
+      this.diff_nodes(node.value, tpl.value, cData); 
+    }
+    if(node.type=="ArrayPattern") {
+      this.diff_nodes(node.elements, tpl.elements, cData); 
+    }   
+    if(node.type=="ArrayExpression") {
+      this.diff_nodes(node.elements, tpl.elements, cData); 
+    }          
+    /*
+    ArrayExpression
+    xArrayPattern
+    */
+    if(node.type=="ObjectPattern") {
+      this.diff_nodes(node.properties, tpl.properties, cData); 
+    }
+    
+    if(node.type=="ObjectExpression") {
+      this.diff_nodes(node.properties, tpl.properties, cData); 
+    }
+    
+    if(node.type=="RestElement") {
+      this.diff_nodes(node.argument, tpl.argument, cData); 
+    }
+    
+    if(node.type=="IfStatement") {
+        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.consequent, tpl.consequent, cData);  
+        this.diff_nodes(node.alternate, tpl.alternate, cData);  
+    }          
+    
+    if(node.type=="Super") {
+        this.diff_nodes(node.test, tpl.test, cData);  
+    
+    }
+    if(node.type=="SwitchStatement") {
+        this.diff_nodes(node.discriminant, tpl.discriminant, cData);  
+        this.diff_nodes(node.cases, tpl.cases, cData);  
+    
+    }
+    if(node.type=="SwitchCase") {
+        this.diff_nodes(node.test, tpl.test, cData);
+        this.diff_nodes(node.consequent, tpl.consequent, cData);
+    
+    }
+    if(node.type=="ForOfStatement") {
+        this.diff_nodes(node.left, tpl.left, cData);
+        this.diff_nodes(node.right, tpl.right, cData);  
+        this.diff_nodes(node.body, tpl.body, cData);  
+    }
+    if(node.type=="ForInStatement") {
+        this.diff_nodes(node.left, tpl.left, cData);
+        this.diff_nodes(node.right, tpl.right, cData);  
+        this.diff_nodes(node.body, tpl.body, cData);  
+    }
+    if(node.type=="ForStatement") {
+        this.diff_nodes(node.init, tpl.init, cData);
+        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.update, tpl.update, cData);  
+        this.diff_nodes(node.body, tpl.body, cData);  
+    }
+    if(node.type=="WhileStatement") {
+        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.body, tpl.body, cData);      
+    }
+    if(node.type=="DoWhileStatement") {
+        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.body, tpl.body, cData);      
+    }
+    if(node.type=="BinaryExpression") {
+        if(node.operator != tpl.operator) {
+           cData.failed = true;
+           return true;
+        }               
+        this.diff_nodes(node.left, tpl.left, cData);
+        this.diff_nodes(node.right, tpl.right, cData);                
+    }
+    // declarations
+    if(node.type=="VariableDeclarator") {
+        if(node.kind != tpl.kind) {
+           cData.failed = true;
+           return true;
+        }              
+        this.diff_nodes(node.id, tpl.id, cData);
+        this.diff_nodes(node.init, tpl.init, cData);
+    }           
+    if(node.type=="ExpressionStatement") {
+      this.diff_nodes(node.expression, tpl.expression, cData);
+    }
+    if(node.type=="AssignmentExpression") {
+        if(node.operator != tpl.operator) {
+           cData.failed = true;
+           return true;
+        }               
+        this.diff_nodes(node.left, tpl.left, cData);
+        this.diff_nodes(node.right, tpl.right, cData);              
+    }
+}catch(e) {
+   cData.failed = true;
 }
 /*
 ArrayExpression
@@ -511,38 +548,52 @@ walker.on("node", function(c) {
             var intoAST  = esprima.parse(newExpression);        
             if(intoAST.type=="Program") intoAST = intoAST.body.shift();
             if(intoAST.type=="ExpressionStatement")  intoAST = intoAST.expression;
+            /*
+                cData.slots["...rest"] = {
+                      srcArray : node,
+                      tplArray : tpl,
+                      tplNodeIndex : t_rest_index,
+                      tplNode : tt
+                };             
+            */
+            matchWalk.on("Literal", function(n) {
+                var toReplace = n.node,
+                    name = toReplace.value,
+                    exprContent = cData.slots[name];
 
+                if(!exprContent) return;
+                if(name=="...rest") {
+                   if(exprContent.srcArray) {
+                     var src_arr_index = exprContent.tplNodeIndex;
+                     var mp = matchWalk.getParent(toReplace);
+                     if(mp.type=="ExpressionStatement") mp = matchWalk.getParent(mp);
+                     if(mp.body) {
+                       var match_node_index = mp.body.indexOf( toReplace );
+                       var steps_to_take = exprContent.srcArray.length - src_arr_index;
+                       // mp.body.splice(i,1);
+                       for(var i=match_node_index; steps_to_take > 0 ; steps_to_take--, i++) {
+                          // mp.body.push( pArray[i] );
+                          mp.body[i] = exprContent.srcArray[src_arr_index++];
+                       }
+                       return;
+                     }
+                   }
+                }
+            });            
             matchWalk.on("Identifier", function(n) {
                 var toReplace = n.node,
                     name = toReplace.name,
                     exprContent = cData.slots[name];
 
                 if(!exprContent) return;
-                if(name=="codeBlock") {
-
-                   var pArray = exprContent[0], pNode = exprContent[1];
-                   if(pArray) {
-                     var node_index = pArray.indexOf(pNode);
-                     var mp = matchWalk.getParent(toReplace);
-                     if(mp.type=="ExpressionStatement") mp = matchWalk.getParent(mp);
-                     if(mp.body) {
-                       var match_node_index = mp.body.indexOf( toReplace );
-                       mp.body.splice(i,1);
-                       for(var i=node_index; i<pArray.length;i++) {
-                          mp.body.push( pArray[i] );
-                       }
-                       return;
-                     }
-                   }
-                }
                 Object.keys(exprContent).forEach( function(k) {
                    toReplace[k] = exprContent[k];
                 })
             });
             matchWalk.startWalk( intoAST, { functions : {}, vars : {}} ); 
-           Object.keys(intoAST).forEach( function(k) {
-             node[k] = intoAST[k];
-           })              
+            Object.keys(intoAST).forEach( function(k) {
+              node[k] = intoAST[k];
+            })              
      }
     }
 });
