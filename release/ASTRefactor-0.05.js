@@ -126,7 +126,7 @@
               }
 
               if (test.type == "ExpressionStatement") test = test.expression;
-              if (test && test.type == "Literal" && test.name == "...rest") {
+              if (test && test.type == "Literal" && test.value == "...rest") {
                 // the rest are skipped
                 cData.slots["...rest"] = {
                   srcArray: node,
