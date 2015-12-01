@@ -72,11 +72,12 @@
       // Initialize static variables here...
 
       /**
-       * @param Object node
-       * @param float tpl
-       * @param float cData
+       * @param Object node  - Source code AST node
+       * @param Object tpl  - Template to compare to
+       * @param Object cData  - differential data
+       * @param String arrayName  - Name of array property
        */
-      _myTrait_.diff_nodes = function (node, tpl, cData) {
+      _myTrait_.diff_nodes = function (node, tpl, cData, arrayName) {
 
         try {
 
@@ -132,7 +133,8 @@
                   srcArray: node,
                   tplArray: tpl,
                   tplNodeIndex: t_rest_index,
-                  tplNode: tt
+                  tplNode: tt,
+                  array_name: arrayName
                 };
                 break;
               }
@@ -564,14 +566,15 @@
                       toReplace = mp;
                       mp = matchWalk.getParent(mp);
                     }
+                    var arrName = exprContent.array_name || "body";
                     // TODO: add here function params etc. possibility to replace multiple statement arrays...
-                    if (mp.body) {
-                      var match_node_index = mp.body.indexOf(toReplace);
+                    if (mp[arrName]) {
+                      var match_node_index = mp[arrName].indexOf(toReplace);
                       var steps_to_take = exprContent.srcArray.length - src_arr_index;
                       // mp.body.splice(i,1);
                       for (var i = match_node_index; steps_to_take > 0; steps_to_take--, i++) {
                         // mp.body.push( pArray[i] );
-                        mp.body[i] = exprContent.srcArray[src_arr_index++];
+                        mp[arrName][i] = exprContent.srcArray[src_arr_index++];
                       }
                       return;
                     }
