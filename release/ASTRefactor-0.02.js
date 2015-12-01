@@ -473,6 +473,9 @@
         var matchAST = esprima.parse(matchExpression); // .body.shift();
         var intoAST = esprima.parse(newExpression); // .body.shift();       
 
+        if (matchAST.type == "Program") matchAST = matchAST.body.shift();
+        if (intoAST.type == "Program") intoAST = intoAST.body.shift();
+
         if (matchAST.type == "ExpressionStatement") {
           matchAST = matchAST.expression;
         }
@@ -499,8 +502,7 @@
               var matchWalk = ASTWalker();
               // var matchAST = esprima.parse(matchExpression).body.shift();
               var intoAST = esprima.parse(newExpression).body.shift();
-
-              if (matchAST.type == "ExpressionStatement") matchAST = matchAST.expression;
+              if (intoAST.type == "Program") intoAST = intoAST.body.shift();
               if (intoAST.type == "ExpressionStatement") intoAST = intoAST.expression;
 
               matchWalk.on("Identifier", function (n) {
