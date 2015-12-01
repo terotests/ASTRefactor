@@ -465,8 +465,8 @@
         });
 
         // The match might be also multilne...
-        var matchAST = esprima.parse(matchExpression).body.shift();
-        var intoAST = esprima.parse(newExpression).body.shift();
+        var matchAST = esprima.parse(matchExpression); // .body.shift();
+        var intoAST = esprima.parse(newExpression); // .body.shift();       
 
         if (matchAST.type == "ExpressionStatement") {
           matchAST = matchAST.expression;
@@ -492,7 +492,7 @@
 
             if (all_found) {
               var matchWalk = ASTWalker();
-              var matchAST = esprima.parse(matchExpression).body.shift();
+              // var matchAST = esprima.parse(matchExpression).body.shift();
               var intoAST = esprima.parse(newExpression).body.shift();
 
               if (matchAST.type == "ExpressionStatement") matchAST = matchAST.expression;
