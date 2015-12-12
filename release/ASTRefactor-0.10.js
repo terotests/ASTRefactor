@@ -504,7 +504,7 @@
       _myTrait_.match = function (varString, matchExpression, codeBaseAST, callBackFn) {
         var rawAST = codeBaseAST;
         if (varString.trim()) {
-          var v_list = varString.split(",").map(function (v) {
+          var v_list = varString.trim().split(",").map(function (v) {
             return v.trim();
           });
         } else {
@@ -539,7 +539,7 @@
             v_list.forEach(function (v) {
               if (cData.slots[v]) all_found_cnt++;
             });
-
+            console.log(all_found_cnt, v_list.length);
             // Callback with context and node as parameters...
             if (all_found_cnt == v_list.length) {
               callBackFn({
