@@ -538,7 +538,11 @@
 
             // Callback with context and node as parameters...
             if (all_found) {
-              callBackFn(c);
+              callBackFn({
+                node: c.node,
+                ctx: c.ctx,
+                found: cData.slots
+              });
             }
           }
         });
