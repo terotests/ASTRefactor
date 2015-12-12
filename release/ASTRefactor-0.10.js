@@ -503,9 +503,13 @@
        */
       _myTrait_.match = function (varString, matchExpression, codeBaseAST, callBackFn) {
         var rawAST = codeBaseAST;
-        var v_list = varString.split(",").map(function (v) {
-          return v.trim();
-        });
+        if (varString.trim()) {
+          var v_list = varString.split(",").map(function (v) {
+            return v.trim();
+          });
+        } else {
+          var v_list = [];
+        }
 
         this.v_list = v_list;
 
@@ -530,14 +534,14 @@
           };
           me.diff_nodes(node, matchAST, cData);
           if (!cData.failed) {
-            var all_found = true;
+            var all_found_cnt = 0;
             // Check if all variables have been found...
             v_list.forEach(function (v) {
-              if (!cData.slots[v]) all_found = false;
+              if (!cData.slots[v]) all_found_cnt++;
             });
 
             // Callback with context and node as parameters...
-            if (all_found) {
+            if (all_found_cnt == v_list.length) {
               callBackFn({
                 node: c.node,
                 ctx: c.ctx,
