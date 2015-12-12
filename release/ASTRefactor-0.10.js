@@ -205,7 +205,7 @@
           }
           if (node.type == "JSXElement") {
             this.diff_nodes(node.openingElement, tpl.openingElement, cData);
-            this.diff_nodes(node.children, tpl.children, cData);
+            // this.diff_nodes(node.children, tpl.children, cData);   
             this.diff_nodes(node.closingElement, tpl.closingElement, cData);
           }
           if (node.type == "JSXOpeningElement") {
