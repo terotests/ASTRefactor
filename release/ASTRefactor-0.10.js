@@ -537,7 +537,7 @@
             var all_found_cnt = 0;
             // Check if all variables have been found...
             v_list.forEach(function (v) {
-              if (!cData.slots[v]) all_found_cnt++;
+              if (cData.slots[v]) all_found_cnt++;
             });
 
             // Callback with context and node as parameters...
