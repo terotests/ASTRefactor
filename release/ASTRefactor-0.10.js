@@ -68,6 +68,8 @@
 
     (function (_myTrait_) {
       var _cnt;
+      var _parser;
+      var _parserOptions;
 
       // Initialize static variables here...
 
@@ -492,6 +494,56 @@
         this._currentLine = "";
         this._indent = 0;
 
+        if (typeof espree != "undefined") {
+          _parser = espree;
+          _parserOptions = {
+
+            // attach range information to each node
+            range: true,
+
+            // attach line/column location information to each node
+            loc: true,
+
+            // create a top-level comments array containing all comments
+            comments: true,
+
+            // attach comments to the closest relevant node as leadingComments and
+            // trailingComments
+            attachComment: true,
+
+            // create a top-level tokens array containing all tokens
+            tokens: true,
+
+            // try to continue parsing if an error is encountered, store errors in a
+            // top-level errors array
+            tolerant: true,
+
+            // specify the language version (3, 5, or 6, default is 5)
+            ecmaVersion: 5,
+
+            // specify which type of script you're parsing (script or module, default is script)
+            sourceType: "script",
+
+            // specify additional language features
+            ecmaFeatures: {
+
+              // enable JSX parsing
+              jsx: true,
+
+              // enable return in global scope
+              globalReturn: true,
+
+              // allow experimental object rest/spread
+              experimentalObjectRestSpread: true
+            }
+          };
+        } else {
+          if (typeof esprima != "undefined") {
+            _parser = esprima;
+            _parserOptions = {};
+          }
+        }
+
         this._options = options || {};
       });
 
@@ -514,7 +566,7 @@
         this.v_list = v_list;
 
         // The match might be also multilne...
-        var matchAST = esprima.parse(matchExpression); // .body.shift();
+        var matchAST = _parser.parse(matchExpression, _parserOptions); // .body.shift();
 
         if (matchAST.type == "Program") matchAST = matchAST.body.shift();
 
@@ -573,8 +625,8 @@
         this.v_list = v_list;
 
         // The match might be also multilne...
-        var matchAST = esprima.parse(matchExpression); // .body.shift();
-        var intoAST = esprima.parse(newExpression); // .body.shift();       
+        var matchAST = _parser.parse(matchExpression, _parserOptions); // .body.shift();
+        var intoAST = _parser.parse(newExpression, _parserOptions); // .body.shift();       
 
         if (matchAST.type == "Program") matchAST = matchAST.body.shift();
         if (intoAST.type == "Program") intoAST = intoAST.body.shift();
