@@ -164,7 +164,59 @@
               return true;
             }
           }
+          /*
+          JSXAttribute
+          xJSXClosingElement
+          xJSXElement
+          xJSXEmptyExpression
+          xJSXExpressionContainer
+          xJSXIdentifier
+          xJSXMemberExpression
+          xJSXNamespacedName
+          xJSXOpeningElement
+          xJSXSpreadAttribute
+          */
+          if (node.type == "JSXAttribute") {
+            this.diff_nodes(node.name, tpl.name, cData);
+            this.diff_nodes(node.value, tpl.value, cData);
+          }
+          if (node.type == "JSXExpressionContainer") {
+            this.diff_nodes(node.expression, tpl.expression, cData);
+          }
+          if (node.type == "JSXIdentifier") {
+            if (node.name != tpl.name) {
+              cData.failed = true;
+              return true;
+            }
+          }
+          if (node.type == "JSXNamespacedName") {
+            if (node.name != tpl.name) {
+              cData.failed = true;
+              return true;
+            }
+            if (node.namespace != tpl.namespace) {
+              cData.failed = true;
+              return true;
+            }
+          }
+          if (node.type == "JSXMemberExpression") {
+            this.diff_nodes(node.property, tpl.property, cData);
+            this.diff_nodes(node.object, tpl.object, cData);
+          }
+          if (node.type == "JSXElement") {
+            this.diff_nodes(node.openingElement, tpl.openingElement, cData);
+            this.diff_nodes(node.children, tpl.children, cData);
+            this.diff_nodes(node.closingElement, tpl.closingElement, cData);
+          }
+          if (node.type == "JSXOpeningElement") {
+            this.diff_nodes(node.attributes, tpl.attributes, cData);
+            this.diff_nodes(node.name, tpl.name, cData);
+          }
 
+          if (node.type == "JSXClosingElement") {
+            this.diff_nodes(node.attributes, tpl.attributes, cData);
+            this.diff_nodes(node.name, tpl.name, cData);
+          }
           if (node.type == "Identifier") {
             if (node.name != tpl.name) {
               cData.failed = true;
