@@ -34,6 +34,7 @@
 
 
 - [diff_nodes](README.md#ASTRefactor_diff_nodes)
+- [match](README.md#ASTRefactor_match)
 - [refactor](README.md#ASTRefactor_refactor)
 
 
@@ -67,8 +68,20 @@ The class has following internal singleton variables:
         
 * _cnt
         
+* _parser
         
-### <a name="ASTRefactor_diff_nodes"></a>ASTRefactor::diff_nodes(node, tpl, cData)
+* _parserOptions
+        
+        
+### <a name="ASTRefactor_diff_nodes"></a>ASTRefactor::diff_nodes(node, tpl, cData, arrayName)
+`node` Source code AST node
+ 
+`tpl` Template to compare to
+ 
+`cData` differential data 
+ 
+`arrayName` Name of array property
+ 
 
 
 ```javascript
@@ -120,13 +133,14 @@ try {
             }
 
             if(test.type=="ExpressionStatement") test = test.expression;
-            if(test && test.type=="Literal" && test.name=="...rest") {
+            if(test && test.type=="Literal" && test.value=="...rest") {
               // the rest are skipped
                 cData.slots["...rest"] = {
                       srcArray : node,
                       tplArray : tpl,
                       tplNodeIndex : t_rest_index,
-                      tplNode : tt
+                      tplNode : tt,
+                      array_name : arrayName
                 };  
               break;
             }
@@ -156,7 +170,60 @@ try {
            return true;
         }
     }
+/*
+JSXAttribute
+xJSXClosingElement
+xJSXElement
+xJSXEmptyExpression
+xJSXExpressionContainer
+xJSXIdentifier
+xJSXMemberExpression
+xJSXNamespacedName
+xJSXOpeningElement
+xJSXSpreadAttribute
+*/
+    if(node.type=="JSXAttribute") {
+        this.diff_nodes(node.name, tpl.name, cData);
+        this.diff_nodes(node.value, tpl.value, cData);    
+    }
+    if(node.type=="JSXExpressionContainer") {
+        this.diff_nodes(node.expression, tpl.expression, cData);
+    }  
+    if(node.type=="JSXIdentifier") {
+        if(node.name != tpl.name) {
+           cData.failed = true;
+           return true;
+        }
+    }      
+    if(node.type=="JSXNamespacedName") {
+        if(node.name != tpl.name) {
+           cData.failed = true;
+           return true;
+        }
+        if(node.namespace != tpl.namespace) {
+           cData.failed = true;
+           return true;
+        }        
+    }       
+    if(node.type=="JSXMemberExpression") {
+        this.diff_nodes(node.property, tpl.property, cData);
+        this.diff_nodes(node.object, tpl.object, cData);
+    }    
+    if(node.type=="JSXElement") {
+        this.diff_nodes(node.openingElement, tpl.openingElement, cData);
+        // this.diff_nodes(node.children, tpl.children, cData);    
+        this.diff_nodes(node.closingElement, tpl.closingElement, cData);
+        
+    }     
+    if(node.type=="JSXOpeningElement") {
+        this.diff_nodes(node.attributes, tpl.attributes, cData);
+        this.diff_nodes(node.name, tpl.name, cData);    
+    }     
     
+    if(node.type=="JSXClosingElement") {
+        this.diff_nodes(node.attributes, tpl.attributes, cData);
+        this.diff_nodes(node.name, tpl.name, cData);    
+    }    
     if(node.type=="Identifier") {
         if(node.name != tpl.name) {
            cData.failed = true;
@@ -176,8 +243,8 @@ try {
            cData.failed = true;
            return true;        
         }    
-        this.diff_nodes(node.params, tpl.params, cData);
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.params, tpl.params, cData, "params");
+        this.diff_nodes(node.body, tpl.body, cData, "params");
         this.diff_nodes(node.id, tpl.id, cData);
     }             
     if(node.type=="ArrowFunctionExpression") {
@@ -185,8 +252,8 @@ try {
            cData.failed = true;
            return true;        
         }
-        this.diff_nodes(node.params, tpl.params, cData);
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.params, tpl.params, cData, "params");
+        this.diff_nodes(node.body, tpl.body, cData, "body");
         this.diff_nodes(node.id, tpl.id, cData);    
     }
     if(node.type=="FunctionExpression") {
@@ -194,31 +261,31 @@ try {
            cData.failed = true;
            return true;        
         }
-        this.diff_nodes(node.params, tpl.params, cData);
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.params, tpl.params, cData, "params");
+        this.diff_nodes(node.body, tpl.body, cData, "body");
         this.diff_nodes(node.id, tpl.id, cData);
     } 
     
     if(node.type=="TryStatement") {
-        this.diff_nodes(node.block, tpl.block, cData);
-        this.diff_nodes(node.handler, tpl.handler, cData);
-        this.diff_nodes(node.finalizer, tpl.finalizer, cData);    
+        this.diff_nodes(node.block, tpl.block, cData, "block");
+        this.diff_nodes(node.handler, tpl.handler, cData, "handler");
+        this.diff_nodes(node.finalizer, tpl.finalizer, cData, "finalizer");    
     }
     if(node.type=="CallExpression") {
-        this.diff_nodes(node.callee, tpl.callee, cData);
-        this.diff_nodes(node.arguments, tpl.arguments, cData);
+        this.diff_nodes(node.callee, tpl.callee, cData, "callee");
+        this.diff_nodes(node.arguments, tpl.arguments, cData, "arguments");
     }
     if(node.type=="SequenceExpression") {
-        this.diff_nodes(node.expressions, tpl.expressions, cData);
+        this.diff_nodes(node.expressions, tpl.expressions, cData, "expressions");
     }
     if(node.type=="BlockStatement") {
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.body, tpl.body, cData, "body");
     }
     if(node.type=="VariableDeclaration") {
-        this.diff_nodes(node.declarations, tpl.declarations, cData);
+        this.diff_nodes(node.declarations, tpl.declarations, cData, "declarations");
     } 
     if(node.type=="YieldExpression") {
-        this.diff_nodes(node.argument, tpl.argument, cData);
+        this.diff_nodes(node.argument, tpl.argument, cData, "argument");
     }
     if(node.type=="ReturnStatement") {
         this.diff_nodes(node.argument, tpl.argument, cData);
@@ -235,21 +302,21 @@ try {
     if(node.type=="ClassDeclaration") {
         this.diff_nodes(node.id, tpl.id, cData);
         this.diff_nodes(node.superClass, tpl.superClass, cData);   
-        this.diff_nodes(node.body, tpl.body, cData);   
+        this.diff_nodes(node.body, tpl.body, cData, "body");   
     }
     if(node.type=="ClassBody") {
-        this.diff_nodes(node.body, tpl.body, cData);   
+        this.diff_nodes(node.body, tpl.body, cData, "body");   
     }
     if(node.type=="CatchClause") {
-        this.diff_nodes(node.param, tpl.param, cData); 
-        this.diff_nodes(node.body, tpl.body, cData);   
+        this.diff_nodes(node.param, tpl.param, cData, "param"); 
+        this.diff_nodes(node.body, tpl.body, cData, "body");   
     }
     if(node.type=="NewExpression") {
         this.diff_nodes(node.callee, tpl.callee, cData);
-        this.diff_nodes(node.arguments, tpl.arguments, cData);
+        this.diff_nodes(node.arguments, tpl.arguments, cData, "arguments");
     }
     if(node.type=="ConditionalExpression") {
-        this.diff_nodes(node.test, tpl.test, cData);  
+        this.diff_nodes(node.test, tpl.test, cData, "test");  
         this.diff_nodes(node.consequent, tpl.consequent, cData);  
         this.diff_nodes(node.alternate, tpl.alternate, cData);      
     }
@@ -260,13 +327,13 @@ try {
         this.diff_nodes(node.argument, tpl.argument, cData);
     }
     if(node.type=="BlockStatement") {
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.body, tpl.body, cData, "body");
     }           
     
     // LabeledStatement
     if(node.type=="LabeledStatement") {
         this.diff_nodes(node.label, tpl.label, cData);
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.body, tpl.body, cData, "body");
     }           
     
     // LogicalExpression
@@ -287,7 +354,7 @@ try {
         this.diff_nodes(node.argument, tpl.argument, cData);
     } 
     if(node.type=="Program") {
-        this.diff_nodes(node.body, tpl.body, cData);
+        this.diff_nodes(node.body, tpl.body, cData, "body");
     } 
     if(node.type=="UpdateExpression") {
         if(node.operator != tpl.operator) {
@@ -305,21 +372,21 @@ try {
       this.diff_nodes(node.value, tpl.value, cData); 
     }
     if(node.type=="ArrayPattern") {
-      this.diff_nodes(node.elements, tpl.elements, cData); 
+      this.diff_nodes(node.elements, tpl.elements, cData, "elements"); 
     }   
     if(node.type=="ArrayExpression") {
-      this.diff_nodes(node.elements, tpl.elements, cData); 
+      this.diff_nodes(node.elements, tpl.elements, cData, "elements"); 
     }          
     /*
     ArrayExpression
     xArrayPattern
     */
     if(node.type=="ObjectPattern") {
-      this.diff_nodes(node.properties, tpl.properties, cData); 
+      this.diff_nodes(node.properties, tpl.properties, cData, "properties"); 
     }
     
     if(node.type=="ObjectExpression") {
-      this.diff_nodes(node.properties, tpl.properties, cData); 
+      this.diff_nodes(node.properties, tpl.properties, cData, "properties"); 
     }
     
     if(node.type=="RestElement") {
@@ -338,7 +405,7 @@ try {
     }
     if(node.type=="SwitchStatement") {
         this.diff_nodes(node.discriminant, tpl.discriminant, cData);  
-        this.diff_nodes(node.cases, tpl.cases, cData);  
+        this.diff_nodes(node.cases, tpl.cases, cData, "cases");  
     
     }
     if(node.type=="SwitchCase") {
@@ -349,26 +416,26 @@ try {
     if(node.type=="ForOfStatement") {
         this.diff_nodes(node.left, tpl.left, cData);
         this.diff_nodes(node.right, tpl.right, cData);  
-        this.diff_nodes(node.body, tpl.body, cData);  
+        this.diff_nodes(node.body, tpl.body, cData, "body");  
     }
     if(node.type=="ForInStatement") {
         this.diff_nodes(node.left, tpl.left, cData);
         this.diff_nodes(node.right, tpl.right, cData);  
-        this.diff_nodes(node.body, tpl.body, cData);  
+        this.diff_nodes(node.body, tpl.body, cData, "body");  
     }
     if(node.type=="ForStatement") {
         this.diff_nodes(node.init, tpl.init, cData);
         this.diff_nodes(node.test, tpl.test, cData);  
         this.diff_nodes(node.update, tpl.update, cData);  
-        this.diff_nodes(node.body, tpl.body, cData);  
+        this.diff_nodes(node.body, tpl.body, cData, "body");  
     }
     if(node.type=="WhileStatement") {
         this.diff_nodes(node.test, tpl.test, cData);  
-        this.diff_nodes(node.body, tpl.body, cData);      
+        this.diff_nodes(node.body, tpl.body, cData, "body");      
     }
     if(node.type=="DoWhileStatement") {
         this.diff_nodes(node.test, tpl.test, cData);  
-        this.diff_nodes(node.body, tpl.body, cData);      
+        this.diff_nodes(node.body, tpl.body, cData, "body");      
     }
     if(node.type=="BinaryExpression") {
         if(node.operator != tpl.operator) {
@@ -492,9 +559,122 @@ this._codeStr = "";
 this._currentLine = "";
 this._indent = 0;
 
+if(typeof(espree)!="undefined") {
+    _parser = espree;
+    _parserOptions = {
+
+    // attach range information to each node
+    range: true,
+
+    // attach line/column location information to each node
+    loc: true,
+
+    // create a top-level comments array containing all comments
+    comments: true,
+
+    // attach comments to the closest relevant node as leadingComments and
+    // trailingComments
+    attachComment: true,
+
+    // create a top-level tokens array containing all tokens
+    tokens: true,
+
+    // try to continue parsing if an error is encountered, store errors in a
+    // top-level errors array
+    tolerant: true,
+
+    // specify the language version (3, 5, or 6, default is 5)
+    ecmaVersion: 5,
+
+    // specify which type of script you're parsing (script or module, default is script)
+    sourceType: "script",
+
+    // specify additional language features
+    ecmaFeatures: {
+
+        // enable JSX parsing
+        jsx: true,
+
+        // enable return in global scope
+        globalReturn: true,
+
+        // allow experimental object rest/spread
+        experimentalObjectRestSpread: true
+    }
+}
+} else {
+    if(typeof(esprima)!="undefined") {   
+        _parser = esprima;
+        _parserOptions = {};
+    }
+}
+
 this._options = options || {};
 ```
         
+### <a name="ASTRefactor_match"></a>ASTRefactor::match(varString, matchExpression, codeBaseAST, callBackFn)
+`varString` Variables in comma separated format, a,b,foobar etc
+ 
+`matchExpression` String expressin to match
+ 
+`codeBaseAST` AST nodes
+ 
+
+
+```javascript
+var rawAST = codeBaseAST;
+if(varString.trim()) {
+    var v_list = varString.trim().split(",").map(function(v) {
+        return v.trim();
+    });
+} else {
+    var v_list = [];
+}
+
+this.v_list = v_list;
+
+// The match might be also multilne...
+var matchAST = _parser.parse(matchExpression,_parserOptions); // .body.shift();
+
+if(matchAST.type=="Program") matchAST = matchAST.body.shift();
+
+if(matchAST.type=="ExpressionStatement") {
+  matchAST = matchAST.expression;
+}
+
+// this._variables
+var walker = ASTWalker();
+var me = this;
+        
+walker.on("node", function(c) {
+    var node = c.node;
+    // diff_nodes
+    var cData = { slots : {} };
+    me.diff_nodes(node, matchAST, cData);
+    if(!cData.failed) {
+     var all_found_cnt = 0;
+     // Check if all variables have been found...
+     v_list.forEach( function(v) {
+        if(cData.slots[v]) all_found_cnt++;
+     })
+     console.log(all_found_cnt,v_list.length)
+     // Callback with context and node as parameters...
+     if(all_found_cnt == v_list.length) {
+        callBackFn( {
+            node : c.node,
+            ctx : c.ctx,
+            found : cData.slots
+        } );             
+     }
+     
+    }
+});
+
+// First walk...
+walker.startWalk( rawAST, { functions : {}, vars : {}} );         
+
+```
+
 ### <a name="ASTRefactor_refactor"></a>ASTRefactor::refactor(varString, matchExpression, newExpression, codeBaseAST)
 `varString` Comma separated List of variables (x,y,i, item) 
  
@@ -515,8 +695,8 @@ var v_list = varString.split(",").map(function(v) {
 this.v_list = v_list;
 
 // The match might be also multilne...
-var matchAST = esprima.parse(matchExpression); // .body.shift();
-var intoAST  = esprima.parse(newExpression); // .body.shift();        
+var matchAST = _parser.parse(matchExpression,_parserOptions); // .body.shift();
+var intoAST  = _parser.parse(newExpression,_parserOptions); // .body.shift();        
 
 if(matchAST.type=="Program") matchAST = matchAST.body.shift();
 if(intoAST.type=="Program") intoAST = intoAST.body.shift();
@@ -566,14 +746,19 @@ walker.on("node", function(c) {
                    if(exprContent.srcArray) {
                      var src_arr_index = exprContent.tplNodeIndex;
                      var mp = matchWalk.getParent(toReplace);
-                     if(mp.type=="ExpressionStatement") mp = matchWalk.getParent(mp);
-                     if(mp.body) {
-                       var match_node_index = mp.body.indexOf( toReplace );
+                     if(mp.type=="ExpressionStatement") {
+                         toReplace = mp;
+                         mp = matchWalk.getParent(mp);
+                     }
+                     var arrName = exprContent.array_name || "body";
+                     // TODO: add here function params etc. possibility to replace multiple statement arrays...
+                     if(mp[arrName]) {
+                       var match_node_index = mp[arrName].indexOf( toReplace );
                        var steps_to_take = exprContent.srcArray.length - src_arr_index;
                        // mp.body.splice(i,1);
                        for(var i=match_node_index; steps_to_take > 0 ; steps_to_take--, i++) {
                           // mp.body.push( pArray[i] );
-                          mp.body[i] = exprContent.srcArray[src_arr_index++];
+                          mp[arrName][i] = exprContent.srcArray[src_arr_index++];
                        }
                        return;
                      }
